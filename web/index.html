@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RedactThis</title>
+  <style>
+    :root { color-scheme: light dark; --bg:#f5f3ed; --panel:#fffdf8; --text:#20231f; --muted:#62685f; --line:#d9d7cf; --accent:#165d49; --danger:#a33b31; --ok:#176b46; }
+    @media (prefers-color-scheme:dark) { :root { --bg:#151714; --panel:#1e211d; --text:#edf0e9; --muted:#aeb5aa; --line:#3c423a; --accent:#76d4b3; --danger:#ff9187; --ok:#78d8aa; } }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    main { width:min(1180px,calc(100% - 32px)); margin:32px auto 56px; }
+    header { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:22px; }
+    h1 { margin:0; font-size:clamp(28px,4vw,42px); letter-spacing:-.04em; }
+    h2 { font-size:17px; margin:0; }
+    p { margin:6px 0 0; color:var(--muted); }
+    .badge { border:1px solid var(--line); border-radius:999px; padding:7px 11px; white-space:nowrap; color:var(--muted); }
+    .badge.ready { color:var(--ok); border-color:var(--ok); }
+    .badge.error { color:var(--danger); border-color:var(--danger); }
+    .toolbar,.actions { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+    .toolbar { margin-bottom:14px; padding:14px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    label { display:grid; gap:5px; font-weight:650; }
+    select,button,textarea { font:inherit; color:inherit; }
+    select,button { min-height:38px; border:1px solid var(--line); border-radius:8px; background:var(--panel); padding:7px 11px; }
+    button { cursor:pointer; font-weight:700; }
+    button.primary { color:white; background:var(--accent); border-color:var(--accent); }
+    @media (prefers-color-scheme:dark) { button.primary { color:#071a14; } }
+    button:disabled { cursor:not-allowed; opacity:.5; }
+    .preset-help { flex:1 1 320px; color:var(--muted); padding-bottom:8px; }
+    .editors { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .panel { min-width:0; border:1px solid var(--line); border-radius:12px; background:var(--panel); overflow:hidden; }
+    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--line); }
+    .counter { color:var(--muted); font-variant-numeric:tabular-nums; }
+    textarea { display:block; width:100%; min-height:460px; resize:vertical; border:0; outline:0; padding:16px; background:transparent; font:13px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace; tab-size:2; }
+    textarea:focus { box-shadow:inset 0 0 0 2px var(--accent); }
+    #output { color:var(--text); }
+    .status { min-height:48px; margin-top:14px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+    .status.success { color:var(--ok); border-color:var(--ok); }
+    .status.warning,.status.error { color:var(--danger); border-color:var(--danger); }
+    .findings { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .finding { color:var(--danger); border-color:var(--danger); min-height:auto; padding:4px 8px; }
+    .summary { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .summary span { color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:3px 8px; }
+    .privacy { margin-top:14px; font-size:13px; }
+    @media (max-width:760px) { .editors { grid-template-columns:1fr; } header { display:block; } .badge { display:inline-block; margin-top:12px; } textarea { min-height:320px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><h1>RedactThis</h1><p>Remove sensitive details locally before sharing text with an AI service.</p></div>
+    <div id="model-status" class="badge" role="status">Checking local model…</div>
+  </header>
+
+  <section class="toolbar" aria-label="Processing options">
+    <label for="preset">Text size
+      <select id="preset">
+        <option value="light">Light · 25k / 4k chunks</option>
+        <option value="balanced" selected>Balanced · 100k / 6k chunks</option>
+        <option value="large">Large · 250k / 8k chunks</option>
+      </select>
+    </label>
+    <div id="preset-help" class="preset-help">Suitable for stack traces, emails, and messages.</div>
+    <div class="actions">
+      <button id="clear" type="button">Clear</button>
+      <button id="redact" class="primary" type="button">Redact &amp; verify</button>
+    </div>
+  </section>
+
+  <div class="editors">
+    <section class="panel">
+      <div class="panel-head"><h2>Original text</h2><span id="input-count" class="counter">0 / 100,000</span></div>
+      <textarea id="input" spellcheck="false" placeholder="Paste a stack trace, email, Slack message, or other text…" aria-label="Original text"></textarea>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>Redacted text</h2><button id="copy" type="button" disabled>Copy</button></div>
+      <textarea id="output" readonly spellcheck="false" placeholder="Verified output appears here." aria-label="Redacted text"></textarea>
+    </section>
+  </div>
+
+  <div id="result-status" class="status" role="status" aria-live="polite">Ready. Your text is processed by the self-hosted service only.</div>
+  <div id="summary" class="summary" aria-label="Replacement summary"></div>
+  <div id="findings" class="findings" aria-label="Verification findings"></div>
+  <p class="privacy">Inputs and placeholder mappings are held in memory for this request and are not stored by RedactThis.</p>
+</main>
+<script src="/app.js" defer></script>
+</body>
+</html>
+

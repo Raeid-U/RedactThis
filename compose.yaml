@@ -1,0 +1,72 @@
+name: redactthis
+
+x-llama-common: &llama-common
+  restart: unless-stopped
+  networks: [private]
+  volumes:
+    - ./models:/models:ro
+  expose: ["8080"]
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    environment:
+      LISTEN_ADDR: ":8080"
+      LLAMA_URL: "http://${LLAMA_HOST:-llama-cpu}:8080"
+      MODEL_NAME: "${MODEL_NAME:-SmolLM2-1.7B-Instruct Q4_K_M}"
+      ACCELERATOR: "${ACCELERATOR:-cpu}"
+      MODEL_TIMEOUT: "${MODEL_TIMEOUT:-10m}"
+      RULES_FILE: /config/rules.json
+    volumes:
+      - ./config:/config:ro
+    networks: [private]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+
+  llama-cpu:
+    <<: *llama-common
+    image: ghcr.io/ggml-org/llama.cpp:server@sha256:20c4196fc08b459a34ef78aaa05b101333b2fac687e30ec99f37b3c9dc071b44
+    profiles: [cpu]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "0"]
+
+  llama-nvidia:
+    <<: *llama-common
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:5ecd56612f9737eed738c0f07190f0122df8746c214c2bbb1783ba1bfcc01e49
+    profiles: [nvidia]
+    gpus: all
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+
+  llama-rocm:
+    <<: *llama-common
+    image: ghcr.io/ggml-org/llama.cpp:server-rocm@sha256:f1f084be6e9ff81224cfa65fb5825c009fe2bc6c588eea438ab47a559a799dd7
+    profiles: [rocm]
+    devices:
+      - /dev/kfd:/dev/kfd
+      - /dev/dri:/dev/dri
+    group_add: [video, render]
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:unconfined
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+
+  llama-intel:
+    <<: *llama-common
+    image: ghcr.io/ggml-org/llama.cpp:server-intel@sha256:2ecfe61c6aa395589ca3b437999ae97f07ca909a88fe2fe426e150ea88a06117
+    profiles: [intel]
+    devices:
+      - /dev/dri:/dev/dri
+    group_add: [video, render]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+
+networks:
+  private:
+    internal: true
+

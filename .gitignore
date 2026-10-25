@@ -1,0 +1,4 @@
+/models/*.gguf
+/redactthis
+.DS_Store
+

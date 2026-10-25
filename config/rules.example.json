@@ -1,0 +1,10 @@
+{
+  "disabledBuiltins": ["PHONE_NUMBER"],
+  "rules": [
+    {
+      "name": "CUSTOMER_ID",
+      "pattern": "customer[_-]?id\\s*[:=]\\s*(?P<secret>[A-Z]{3}-[0-9]{6})"
+    }
+  ]
+}
+
