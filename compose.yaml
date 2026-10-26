@@ -24,7 +24,7 @@ services:
       RULES_FILE: /config/rules.json
     volumes:
       - ./config:/config:ro
-    networks: [private]
+    networks: [public, private]
     read_only: true
     tmpfs: [/tmp]
     cap_drop: [ALL]
@@ -35,14 +35,14 @@ services:
     <<: *llama-common
     image: ghcr.io/ggml-org/llama.cpp:server@sha256:20c4196fc08b459a34ef78aaa05b101333b2fac687e30ec99f37b3c9dc071b44
     profiles: [cpu]
-    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "0"]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1"]
 
   llama-nvidia:
     <<: *llama-common
     image: ghcr.io/ggml-org/llama.cpp:server-cuda@sha256:5ecd56612f9737eed738c0f07190f0122df8746c214c2bbb1783ba1bfcc01e49
     profiles: [nvidia]
     gpus: all
-    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
 
   llama-rocm:
     <<: *llama-common
@@ -55,7 +55,7 @@ services:
     security_opt:
       - no-new-privileges:true
       - seccomp:unconfined
-    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
 
   llama-intel:
     <<: *llama-common
@@ -64,9 +64,9 @@ services:
     devices:
       - /dev/dri:/dev/dri
     group_add: [video, render]
-    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "--host", "0.0.0.0", "--port", "8080", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
+    command: ["-m", "/models/${MODEL_FILE:-smollm2-1.7b-instruct-q4_k_m.gguf}", "-c", "${CONTEXT_SIZE:-8192}", "-np", "1", "-ngl", "${GPU_LAYERS:-99}"]
 
 networks:
+  public:
   private:
     internal: true
-

@@ -80,7 +80,7 @@ GPU_LAYERS=99
 MODEL_TIMEOUT=10m
 ```
 
-Model selection and inference parameters are deploy-time settings; restart the Compose project after changing them. The llama.cpp API is only reachable on the private container network, while the web application is published on host loopback only.
+Model selection and inference parameters are deploy-time settings; restart the Compose project after changing them. The app joins a normal edge network for its loopback-only published port and a separate internal network for llama.cpp; the llama.cpp API has no host port and remains unreachable directly from the host or LAN.
 
 ## Custom detection rules
 
