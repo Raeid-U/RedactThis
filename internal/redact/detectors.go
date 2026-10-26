@@ -41,15 +41,18 @@ type match struct {
 func NewDetector(rulesPath string) (*Detector, error) {
 	builtins := []rule{
 		compileRule("PRIVATE_KEY", `(?s)(?P<secret>-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----.*?-----END (?:[A-Z0-9 ]+ )?PRIVATE KEY-----)`, 100, nil),
-		compileRule("API_KEY", `(?P<secret>AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,})`, 95, nil),
+		compileRule("API_KEY", `(?P<secret>AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{30,}|SG\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}|npm_[A-Za-z0-9_-]{20,}|(?i:(?:api|key|token|secret|sk|pk|rk)[_/-][A-Za-z0-9]{3,}(?:[_./-][A-Za-z0-9]{3,}){1,}))`, 95, validAPIKey),
 		compileRule("JWT", `(?P<secret>eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,})`, 94, nil),
 		compileRule("CREDENTIAL", `(?i)(?:password|passwd|pwd|api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|secret)\s*[:=]\s*["']?(?P<secret>[^\s"',;]{4,})`, 90, nil),
 		compileRule("URL_SECRET", `(?i)(?:[?&](?:api[_-]?key|token|access[_-]?token|password|secret)=)(?P<secret>[^&#\s"',;]{4,})`, 89, nil),
 		compileRule("DEVICE_ID", `(?i)(?:serial(?:_number)?|device[_-]?id|imei|meid)\s*[:=]\s*["']?(?P<secret>[A-Za-z0-9._:-]{5,})`, 88, nil),
 		compileRule("EMAIL", `(?P<secret>[A-Za-z0-9.!#$%&'*+/=?^_`+"`"+`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+)`, 70, nil),
+		compileRule("STREET_ADDRESS", `(?i)(?P<secret>\b[0-9]{1,6}\s+(?:[A-Z0-9.'-]+\s+){1,6}(?:STREET|ST|AVENUE|AVE|ROAD|RD|BOULEVARD|BLVD|DRIVE|DR|LANE|LN|COURT|CT|CIRCLE|CIR|HIGHWAY|HWY|PARKWAY|PKWY|PLACE|PL|TERRACE|TER|TRAIL|TRL|WAY)(?:\s+(?:APT|APARTMENT|UNIT|SUITE|STE|#)\s*[A-Z0-9-]+)?\b)`, 68, nil),
 		compileRule("MAC_ADDRESS", `(?P<secret>(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2})`, 70, nil),
 		compileRule("UUID", `(?P<secret>[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[1-8][0-9A-Fa-f]{3}-[89ABab][0-9A-Fa-f]{3}-[0-9A-Fa-f]{12})`, 70, nil),
 		compileRule("IP_ADDRESS", `(?P<secret>(?:\d{1,3}\.){3}\d{1,3}|[0-9A-Fa-f]*:[0-9A-Fa-f:]+)`, 65, func(s string) bool { return net.ParseIP(s) != nil }),
+		compileRule("CANADIAN_POSTAL_CODE", `(?i)(?P<secret>\b[ABCEGHJ-NPRSTVXY][0-9][ABCEGHJ-NPRSTV-Z][ -]?[0-9][ABCEGHJ-NPRSTV-Z][0-9]\b)`, 60, nil),
+		compileRule("US_ZIP_CODE", `(?P<secret>\b[0-9]{5}(?:-[0-9]{4})?\b)`, 55, nil),
 		compileRule("PHONE_NUMBER", `(?P<secret>\+?[0-9][0-9 .()-]{7,}[0-9])`, 40, validPhone),
 		compileRule("PAYMENT_CARD", `(?P<secret>[0-9](?:[ -]?[0-9]){12,18})`, 35, validCard),
 	}
@@ -105,6 +108,27 @@ func NewDetector(rulesPath string) (*Detector, error) {
 		seen[name] = true
 	}
 	return &Detector{rules: filtered}, nil
+}
+
+func validAPIKey(s string) bool {
+	// Known provider formats are sufficiently distinctive on their own. The
+	// generic prefixed form must be long and contain a digit to avoid treating
+	// ordinary slash- or dash-separated labels as credentials.
+	if strings.HasPrefix(s, "AKIA") || strings.HasPrefix(s, "ASIA") || strings.HasPrefix(s, "gh") ||
+		strings.HasPrefix(s, "github_pat_") || strings.HasPrefix(s, "xox") || strings.HasPrefix(s, "AIza") ||
+		strings.HasPrefix(s, "SG.") || strings.HasPrefix(s, "npm_") {
+		return true
+	}
+	if len(s) < 20 {
+		return false
+	}
+	hasDigit := false
+	for _, r := range s {
+		if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+	}
+	return hasDigit
 }
 
 func compileRule(name, pattern string, priority int, valid func(string) bool) rule {

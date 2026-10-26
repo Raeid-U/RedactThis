@@ -26,9 +26,9 @@ The download script supports `135m`, `360m`, and `1.7b`. It downloads the offici
 
 ## How processing works
 
-1. Built-in Go/RE2 detectors remove recognizable private keys, provider tokens, JWTs, credential assignments, sensitive URL parameters, serial/device identifiers, IP and MAC addresses, UUIDs, emails, phone numbers, and Luhn-valid payment card numbers.
+1. Built-in Go/RE2 detectors remove recognizable private keys, provider and segmented API keys, JWTs, credential assignments, sensitive URL parameters, serial/device identifiers, IP and MAC addresses, UUIDs, emails, phone numbers, street addresses, US ZIP codes, Canadian postal codes, and Luhn-valid payment card numbers.
 2. The sanitized document is split at line boundaries. SmolLM2 returns schema-constrained JSON containing only exact residual sensitive substrings; application code, not the model, performs replacements.
-3. A fresh prompt verifies the completed document. If it reports a possible miss, the page shows the draft and locations but disables its Copy button.
+3. A fresh prompt verifies the completed document. If it reports a possible miss, the page shows the partial draft and locations. It can be run through redaction again, or copied only after an explicit second-click warning.
 
 Repeated values use the same placeholder throughout a request, such as `[EMAIL_1]`. Formatting and unrelated text are not intentionally rewritten. Oversized lines receive overlapping model windows so identifiers near a boundary remain visible.
 
@@ -100,7 +100,7 @@ Edit `config/rules.json` before starting the service. A custom expression uses G
 
 Category names become uppercase typed placeholders. Invalid JSON, regular expressions, duplicate names, or missing `secret` captures make the application fail at startup. See `config/rules.example.json` for a copyable example.
 
-Built-in detector names are `PRIVATE_KEY`, `API_KEY`, `JWT`, `CREDENTIAL`, `URL_SECRET`, `DEVICE_ID`, `EMAIL`, `MAC_ADDRESS`, `UUID`, `IP_ADDRESS`, `PHONE_NUMBER`, and `PAYMENT_CARD`.
+Built-in detector names are `PRIVATE_KEY`, `API_KEY`, `JWT`, `CREDENTIAL`, `URL_SECRET`, `DEVICE_ID`, `EMAIL`, `STREET_ADDRESS`, `MAC_ADDRESS`, `UUID`, `IP_ADDRESS`, `CANADIAN_POSTAL_CODE`, `US_ZIP_CODE`, `PHONE_NUMBER`, and `PAYMENT_CARD`.
 
 ## HTTP interface
 

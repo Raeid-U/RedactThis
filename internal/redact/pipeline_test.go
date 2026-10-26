@@ -107,3 +107,24 @@ func TestChunkingPreservesCoverage(t *testing.T) {
 		t.Fatal("chunks unexpectedly equal")
 	}
 }
+
+func TestAddressPostalCodeAndSegmentedAPIKeyDetectors(t *testing.T) {
+	detector, err := NewDetector("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := "Ship to 123 North Main Street Apt 4B, Boston MA 02110 or K1A 0B1. Use sk_live/AbCDef12_34567890."
+	found := detector.Find(input)
+	categories := map[string]string{}
+	for _, item := range found {
+		categories[item.category] = item.value
+	}
+	for _, category := range []string{"STREET_ADDRESS", "US_ZIP_CODE", "CANADIAN_POSTAL_CODE", "API_KEY"} {
+		if categories[category] == "" {
+			t.Fatalf("missing %s in %#v", category, found)
+		}
+	}
+	if categories["API_KEY"] != "sk_live/AbCDef12_34567890" {
+		t.Fatalf("segmented API key was not fully captured: %#v", found)
+	}
+}
