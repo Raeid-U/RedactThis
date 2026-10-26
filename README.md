@@ -7,6 +7,14 @@ Everything needed at runtime is served locally: one Go binary, one HTML page, on
 > [!IMPORTANT]
 > RedactThis reduces accidental disclosure; it cannot guarantee that every sensitive value will be detected. Review output before sharing it, particularly when using the 135M or 360M models or an unsupported custom GGUF.
 
+## Demo Video
+
+
+
+https://github.com/user-attachments/assets/d766ed77-cd5a-41c8-91b9-b5a7cfb4d16d
+
+
+
 ## Quick start
 
 Requirements are Docker Engine with Compose v2, `curl`, and roughly 1.2 GB of free space for the recommended quantized model.
